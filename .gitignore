@@ -1,0 +1,14 @@
+# Workspace
+workspace/*
+!workspace/.gitkeep
+
+# Persistent data
+data/*
+!data/.gitkeep
+
+# Environment variables
+.env
+
+# OS files
+.DS_Store
+Thumbs.db
