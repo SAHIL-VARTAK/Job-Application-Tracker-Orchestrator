@@ -1,8 +1,8 @@
 # Job-Application-Tracker-Orchestrator
 
-The Job Application Tracker Orchestrator is the central repository for managing the complete Job Application Tracker application. It automatically clones the backend and frontend repositories, builds their Docker images, and starts the entire application stack with a single command.
+The Job Application Tracker Orchestrator is the central repository for managing the complete Job Application Tracker application. It automatically clones the backend and frontend repositories and provides scripts for running the application either with Docker or natively on your machine.
 
-This repository is intended to provide a simple developer experience for running the project locally without manually cloning or configuring multiple repositories.
+This repository simplifies local development by eliminating the need to manually clone, configure, and start multiple repositories.
 
 ## Project Repositories
 
@@ -25,7 +25,7 @@ Backend (Spring Boot)         Frontend (React + Vite)
       │                               │
       └───────────────┬───────────────┘
                       │
-                 Docker Compose
+        Docker Compose / Native Execution
                       │
                       ▼
                 Running Application
@@ -43,7 +43,16 @@ Before running the project, ensure the following tools are installed:
 
 The orchestrator automatically verifies these prerequisites before launching the application.
 
-## Running with the Orchestrator (Recommended)
+## Running Modes
+
+The orchestrator supports two ways of running the application.
+
+| Mode | Script | Description |
+|------|--------|-------------|
+| Docker | `orchestrator.sh` | Builds Docker images and runs the application using Docker Compose. |
+| Local | `orchestrator-local.sh` | Runs the backend and frontend directly on your machine without Docker. Ideal for development and debugging. |
+
+## Running with Docker
 
 The orchestrator provides a simplified interface for managing the complete application.
 
@@ -166,3 +175,60 @@ http://localhost:5173
 ```
 
 The Vite development server proxies API requests to the Spring Boot backend, so no additional frontend configuration is required.
+
+## Running Without Docker Using the Local Orchestrator
+
+Instead of manually cloning the repositories and starting each service individually, you can use the local orchestrator to automate the entire process.
+
+The local orchestrator automatically:
+
+- Checks the required prerequisites.
+- Creates the `workspace/` directory (if needed).
+- Clones the backend and frontend repositories (if they do not already exist).
+- Updates the repositories when requested.
+- Starts the Spring Boot backend.
+- Installs frontend dependencies (if required).
+- Starts the Vite development server.
+
+### Launch the application
+
+Interactive mode (recommended for development):
+
+```bash
+./orchestrator-local.sh launch
+```
+
+The application will continue running until you press **Ctrl+C**, at which point both the backend and frontend are stopped automatically.
+
+### Launch in detached mode
+
+To start the application in the background and immediately return to the terminal:
+
+```bash
+./orchestrator-local.sh launch --detach
+```
+
+Once started, the application can be stopped with:
+
+```bash
+./orchestrator-local.sh stop
+```
+
+### Available Commands
+
+| Command | Description |
+|---------|-------------|
+| `launch` | Clone repositories (if needed) and start the backend and frontend |
+| `launch --detach` | Start the application in the background and return immediately |
+| `update` | Pull the latest changes from both repositories |
+| `stop` | Stop a detached local application |
+| `help` | Display the help menu |
+
+## Continuous Integration
+
+This repository includes two GitHub Actions workflows:
+
+| Workflow | Purpose |
+|----------|---------|
+| Docker Orchestrator CI | Validates the Docker-based orchestrator (`orchestrator.sh`) |
+| Local Orchestrator CI | Validates the native/local orchestrator (`orchestrator-local.sh`) by launching the application, verifying the backend and frontend, and shutting down the running processes |
