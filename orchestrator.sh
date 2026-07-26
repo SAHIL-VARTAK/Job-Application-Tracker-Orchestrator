@@ -13,42 +13,76 @@ FRONTEND_NAME="Job-Application-Tracker-UI"
 BACKEND_DIR="$WORKSPACE_DIR/$BACKEND_NAME"
 FRONTEND_DIR="$WORKSPACE_DIR/$FRONTEND_NAME"
 
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+BLUE='\033[0;34m'
+YELLOW='\033[1;33m'
+BOLD='\033[1m'
+NC='\033[0m' # No Color
+
+print_header() {
+    echo
+    echo -e "${BOLD}=========================================${NC}"
+    echo -e "${BOLD} $1${NC}"
+    echo -e "${BOLD}=========================================${NC}"
+    echo
+}
+
+print_success() {
+    echo -e "${GREEN}✓${NC} $1"
+}
+
+print_error() {
+    echo -e "${RED}❌${NC} $1"
+}
+
+print_info() {
+    echo -e "${BLUE}ℹ${NC} $1"
+}
+
+print_application_urls() {
+    echo
+    echo -e "${BLUE}Frontend :${NC} ${GREEN}http://localhost:5173${NC}"
+    echo -e "${BLUE}Backend  :${NC} ${GREEN}http://localhost:8080${NC}"
+    echo -e "${BLUE}Swagger  :${NC} ${GREEN}http://localhost:8080/swagger-ui/index.html${NC}"
+}
+
 show_help() {
-    cat << EOF
-Job Application Tracker Orchestrator
-
-Usage:
-  ./orchestrator.sh <command>
-
-Commands:
-  launch                  Clone repositories and start the application
-  update                  Update repositories and restart the application
-  stop                    Stop the application
-  logs [backend|frontend] View application logs
-  health                  Check application health
-  clean                   Remove cloned repositories and Docker resources
-  help                    Show this help message
-EOF
+    echo
+    echo -e "${BOLD}Job Application Tracker Orchestrator${NC}"
+    echo
+    echo -e "${BLUE}Usage:${NC}"
+    echo "  ./orchestrator.sh <command>"
+    echo
+    echo -e "${BLUE}Commands:${NC}"
+    echo -e "  ${GREEN}launch${NC}                  Clone repositories and start the application"
+    echo -e "  ${GREEN}update${NC}                  Update repositories and restart the application"
+    echo -e "  ${GREEN}stop${NC}                    Stop the application"
+    echo -e "  ${GREEN}logs [backend|frontend]${NC} View application logs"
+    echo -e "  ${GREEN}health${NC}                  Check application health"
+    echo -e "  ${GREEN}clean${NC}                   Remove cloned repositories and Docker resources"
+    echo -e "  ${GREEN}help${NC}                    Show this help message"
 }
 
 check_prerequisites() {
     command -v git >/dev/null 2>&1 || {
-        echo "❌ Git is not installed."
+        print_error "Git is not installed."
         exit 1
     }
 
     command -v docker >/dev/null 2>&1 || {
-        echo "❌ Docker is not installed."
+        print_error "Docker is not installed."
         exit 1
     }
 
     docker info >/dev/null 2>&1 || {
-        echo "❌ Docker is not running."
+        print_error "Docker is not running."
         exit 1
     }
 
     docker compose version >/dev/null 2>&1 || {
-        echo "❌ Docker Compose is not available."
+        print_error "Docker Compose is not available."
         exit 1
     }
 }
@@ -63,22 +97,22 @@ clone_repository() {
     local repo_name="$3"
 
     if [[ -d "$target_dir/.git" ]]; then
-        echo "✓ $repo_name already exists."
+        print_success "$repo_name already exists."
         return
     fi
 
-    echo "Cloning $repo_name..."
+    print_info "Cloning $repo_name..."
     git clone "$repo_url" "$target_dir"
-    echo "✓ $repo_name cloned successfully."
+    print_success "$repo_name cloned successfully."
 }
 
 update_repositories() {
     echo
-    echo "Updating repositories..."
+    print_info "Updating repositories..."
 
     for repo_dir in "$BACKEND_DIR" "$FRONTEND_DIR"; do
         if [[ ! -d "$repo_dir/.git" ]]; then
-            echo "❌ Repository not found: $repo_dir"
+            print_error "Repository not found: $repo_dir"
             echo "Run './orchestrator.sh launch' first."
             exit 1
         fi
@@ -86,7 +120,7 @@ update_repositories() {
         repo_name=$(basename "$repo_dir")
 
         echo
-        echo "Updating $repo_name..."
+        print_info "Updating $repo_name..."
 
         (
             cd "$repo_dir" || exit 1
@@ -98,35 +132,35 @@ update_repositories() {
             git pull origin "$CURRENT_BRANCH"
         )
 
-        echo "✓ $repo_name updated."
+        print_success "$repo_name updated."
     done
 }
 
 start_application() {
     echo
-    echo "Building Docker images..."
+    print_info "Building Docker images..."
 
     docker compose build
 
     echo
-    echo "Starting containers..."
+    print_info "Starting containers..."
 
     docker compose up -d
 }
 
 restart_application() {
     echo
-    echo "Stopping containers..."
+    print_info "Stopping containers..."
 
     docker compose down
 
     echo
-    echo "Rebuilding images..."
+    print_info "Rebuilding images..."
 
     docker compose build
 
     echo
-    echo "Starting containers..."
+    print_info "Starting containers..."
 
     docker compose up -d
 }
@@ -148,28 +182,20 @@ launch() {
 
     start_application
 
-    echo
-    echo "========================================="
-    echo " Job Application Tracker is running!"
-    echo "========================================="
-    echo
-    echo "Frontend : http://localhost:5173"
-    echo "Backend  : http://localhost:8080"
-    echo "Swagger  : http://localhost:8080/swagger-ui/index.html"
+    print_header "Job Application Tracker is running!"
+
+    print_application_urls
 }
 
 stop() {
     check_prerequisites
 
     echo
-    echo "Stopping Job Application Tracker..."
+    print_info "Stopping Job Application Tracker..."
 
     docker compose down
 
-    echo
-    echo "========================================="
-    echo " Job Application Tracker stopped."
-    echo "========================================="
+    print_header "Job Application Tracker stopped."
 }
 
 update() {
@@ -179,14 +205,9 @@ update() {
 
     restart_application
 
-    echo
-    echo "========================================="
-    echo " Job Application Tracker updated!"
-    echo "========================================="
-    echo
-    echo "Frontend : http://localhost:5173"
-    echo "Backend  : http://localhost:8080"
-    echo "Swagger  : http://localhost:8080/swagger-ui/index.html"
+    print_header "Job Application Tracker updated!"
+
+    print_application_urls
 }
 
 logs() {
@@ -214,70 +235,66 @@ health() {
 
     local overall_status=0
 
-    echo
-    echo "========================================="
-    echo " Application Health"
-    echo "========================================="
-    echo
+    print_header "Application Health"
 
-    echo "Docker"
+    print_info "Docker"
 
     if docker info >/dev/null 2>&1; then
-        echo "  ✓ Docker daemon is running"
+        print_success "Docker daemon is running"
     else
-        echo "  ✗ Docker daemon is not running"
+        print_error "Docker daemon is not running"
         overall_status=1
     fi
 
     echo
-    echo "Containers"
+    print_info "Containers"
 
     if docker compose ps --status running | grep -q "backend"; then
-        echo "  ✓ Backend container is running"
+        print_success "Backend container is running"
     else
-        echo "  ✗ Backend container is not running"
+        print_error "Backend container is not running"
         overall_status=1
     fi
 
     if docker compose ps --status running | grep -q "frontend"; then
-        echo "  ✓ Frontend container is running"
+        print_success "Frontend container is running"
     else
-        echo "  ✗ Frontend container is not running"
+        print_error "Frontend container is not running"
         overall_status=1
     fi
 
     echo
-    echo "Endpoints"
+    print_info "Endpoints"
 
     if curl --silent --fail http://localhost:8080/api/applications >/dev/null; then
-        echo "  ✓ Backend API      http://localhost:8080/api/applications"
+        print_success "Backend API  : http://localhost:8080/api/applications"
     else
-        echo "  ✗ Backend API      Unreachable"
+        print_error "Backend API  : Unreachable"
         overall_status=1
     fi
 
     if curl --silent --fail http://localhost:8080/swagger-ui/index.html >/dev/null; then
-        echo "  ✓ Swagger UI       http://localhost:8080/swagger-ui/index.html"
+        print_success "Swagger UI  : http://localhost:8080/swagger-ui/index.html"
     else
-        echo "  ✗ Swagger UI       Unreachable"
+        print_error "Swagger UI  : Unreachable"
         overall_status=1
     fi
 
     if curl --silent --fail http://localhost:5173 >/dev/null; then
-        echo "  ✓ Frontend         http://localhost:5173"
+        print_success "Frontend    : http://localhost:5173"
     else
-        echo "  ✗ Frontend         Unreachable"
+        print_error "Frontend    : Unreachable"
         overall_status=1
     fi
 
     echo
-    echo "Overall Status"
+    print_info "Overall Status"
 
     if [[ $overall_status -eq 0 ]]; then
-        echo "  ✓ Application is healthy"
+        print_success "Application is healthy"
         return 0
     else
-        echo "  ✗ Application is unhealthy"
+        print_error "Application is unhealthy"
         return 1
     fi
 }
@@ -285,11 +302,8 @@ health() {
 clean() {
     check_prerequisites
 
-    echo
-    echo "========================================="
-    echo " Clean Workspace"
-    echo "========================================="
-    echo
+    print_header "Clean Workspace"
+
     echo "This will remove:"
     echo "  • Cloned repositories"
     echo "  • Docker containers"
@@ -304,31 +318,28 @@ clean() {
             ;;
         *)
             echo
-            echo "Clean operation cancelled."
+            print_info "Clean operation cancelled."
             return
             ;;
     esac
 
     echo
-    echo "Stopping containers..."
+    print_info "Stopping containers..."
     docker compose down --rmi local
 
-    echo "Removing cloned repositories..."
+    print_info "Removing cloned repositories..."
     rm -rf "$BACKEND_DIR"
     rm -rf "$FRONTEND_DIR"
 
-    echo "Cleaning data directory..."
+    print_info "Cleaning data directory..."
     rm -rf data/*
     touch data/.gitkeep
 
-    echo "Cleaning workspace..."
+    print_info "Cleaning workspace..."
     rm -rf workspace/*
     touch workspace/.gitkeep
 
-    echo
-    echo "========================================="
-    echo " Workspace cleaned successfully."
-    echo "========================================="
+    print_header "Workspace cleaned successfully."
 }
 
 case "${1:-help}" in
@@ -342,7 +353,7 @@ case "${1:-help}" in
         update
         ;;
     logs)
-        logs
+        logs "$@"
         ;;
     health)
         health
