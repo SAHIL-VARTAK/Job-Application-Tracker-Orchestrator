@@ -41,6 +41,9 @@ jobs:
       - name: Run ShellCheck
         run: shellcheck orchestrator.sh
 
+      - name: Verify help command
+        run: ./orchestrator.sh help 
+
       - name: Launch application
         run: ./orchestrator.sh launch
 
@@ -60,6 +63,9 @@ jobs:
 
           echo "Backend failed to start."
           exit 1
+
+      - name: Verify health command
+        run: ./orchestrator.sh health
 
       - name: Verify backend API
         run: |
@@ -84,3 +90,14 @@ jobs:
       - name: Stop application
         if: always()
         run: ./orchestrator.sh stop
+
+      - name: Clean workspace
+        if: always()
+        run: |
+          printf "y\n" | ./orchestrator.sh clean
+
+      - name: Verify cleanup
+        if: always()
+        run: |
+          test -d workspace
+          test -d data
