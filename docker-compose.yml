@@ -1,0 +1,45 @@
+services:
+  backend:
+    container_name: job-tracker-backend
+
+    # Build the backend image from the cloned Spring Boot repository.
+    build:
+      context: ./workspace/Job-Application-Tracker
+
+    image: job-tracker-backend
+
+    # Expose the Spring Boot application.
+    ports:
+      - "8080:8080"
+
+    # Persist the SQLite database outside the container.
+    volumes:
+      - ./data:/app/data
+
+    # Restart automatically unless explicitly stopped.
+    restart: unless-stopped
+
+  frontend:
+    container_name: job-tracker-frontend
+
+    # Build the frontend image from the cloned React repository.
+    build:
+      context: ./workspace/Job-Application-Tracker-UI
+
+      # Embedded into the Vite production build.
+      # Containers communicate using the Compose service name.
+      args:
+        VITE_API_BASE_URL: http://localhost:8080/api
+
+    image: job-tracker-frontend
+
+    # Expose the React application through Nginx.
+    ports:
+      - "5173:80"
+
+    # Start the frontend after the backend container is created.
+    depends_on:
+      - backend
+
+    # Restart automatically unless explicitly stopped.
+    restart: unless-stopped

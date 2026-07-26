@@ -46,6 +46,11 @@ check_prerequisites() {
         echo "❌ Docker is not running."
         exit 1
     }
+
+    docker compose version >/dev/null 2>&1 || {
+        echo "❌ Docker Compose is not available."
+        exit 1
+    }
 }
 
 create_workspace() {
@@ -67,12 +72,67 @@ clone_repository() {
     echo "✓ $repo_name cloned successfully."
 }
 
+update_repositories() {
+    echo
+    echo "Updating repositories..."
+
+    for repo_dir in "$BACKEND_DIR" "$FRONTEND_DIR"; do
+        if [[ ! -d "$repo_dir/.git" ]]; then
+            echo "❌ Repository not found: $repo_dir"
+            echo "Run './orchestrator.sh launch' first."
+            exit 1
+        fi
+
+        repo_name=$(basename "$repo_dir")
+
+        echo
+        echo "Updating $repo_name..."
+
+        (
+            cd "$repo_dir" || exit 1
+
+            git fetch --all
+
+            CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+
+            git pull origin "$CURRENT_BRANCH"
+        )
+
+        echo "✓ $repo_name updated."
+    done
+}
+
+start_application() {
+    echo
+    echo "Building Docker images..."
+
+    docker compose build
+
+    echo
+    echo "Starting containers..."
+
+    docker compose up -d
+}
+
+restart_application() {
+    echo
+    echo "Stopping containers..."
+
+    docker compose down
+
+    echo
+    echo "Rebuilding images..."
+
+    docker compose build
+
+    echo
+    echo "Starting containers..."
+
+    docker compose up -d
+}
+
 launch() {
     check_prerequisites
-
-    echo "WORKSPACE_DIR = $WORKSPACE_DIR"
-echo "BACKEND_DIR   = $BACKEND_DIR"
-echo "FRONTEND_DIR  = $FRONTEND_DIR"
 
     create_workspace
 
@@ -86,16 +146,47 @@ echo "FRONTEND_DIR  = $FRONTEND_DIR"
         "$FRONTEND_DIR" \
         "$FRONTEND_NAME"
 
+    start_application
+
     echo
-    echo "✓ All repositories are ready."
+    echo "========================================="
+    echo " Job Application Tracker is running!"
+    echo "========================================="
+    echo
+    echo "Frontend : http://localhost:5173"
+    echo "Backend  : http://localhost:8080"
+    echo "Swagger  : http://localhost:8080/swagger-ui/index.html"
 }
 
 stop() {
-    echo "Stop command coming soon..."
+    check_prerequisites
+
+    echo
+    echo "Stopping Job Application Tracker..."
+
+    docker compose down
+
+    echo
+    echo "========================================="
+    echo " Job Application Tracker stopped."
+    echo "========================================="
 }
 
 update() {
-    echo "Update command coming soon..."
+    check_prerequisites
+
+    update_repositories
+
+    restart_application
+
+    echo
+    echo "========================================="
+    echo " Job Application Tracker updated!"
+    echo "========================================="
+    echo
+    echo "Frontend : http://localhost:5173"
+    echo "Backend  : http://localhost:8080"
+    echo "Swagger  : http://localhost:8080/swagger-ui/index.html"
 }
 
 logs() {
