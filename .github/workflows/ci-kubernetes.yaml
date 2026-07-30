@@ -1,0 +1,161 @@
+name: Kubernetes Orchestrator CI
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - "task/**"
+
+  pull_request:
+    branches:
+      - main
+      - develop
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  kubernetes-orchestrator:
+    name: Validate Kubernetes Orchestrator
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Make scripts executable
+        run: |
+          chmod +x orchestrator-kubernetes.sh
+          chmod +x kubernetes/*.sh
+          chmod +x kubernetes/ingress/*.sh
+          chmod +x kubernetes/storage/*.sh
+
+      - name: Validate shell scripts
+        run: |
+          bash -n orchestrator-kubernetes.sh
+          bash -n kubernetes/build-cluster.sh
+          bash -n kubernetes/build.sh
+          bash -n kubernetes/deploy.sh
+          bash -n kubernetes/delete.sh
+          bash -n kubernetes/destroy-cluster.sh
+          bash -n kubernetes/stop.sh
+          bash -n kubernetes/status.sh
+          bash -n kubernetes/ingress/install.sh
+          bash -n kubernetes/ingress/uninstall.sh
+          bash -n kubernetes/storage/install.sh
+
+      - name: Install ShellCheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck
+
+      - name: Run ShellCheck
+        run: |
+          shellcheck orchestrator-kubernetes.sh
+          shellcheck kubernetes/*.sh
+          shellcheck kubernetes/ingress/*.sh
+          shellcheck kubernetes/storage/*.sh
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Install Kind
+        uses: helm/kind-action@v1
+        with:
+          install_only: true
+
+      - name: Verify help command
+        run: ./orchestrator-kubernetes.sh help
+
+      - name: Launch application
+        run: ./orchestrator-kubernetes.sh launch
+
+      - name: Wait for backend rollout
+        run: |
+          kubectl rollout status deployment/backend \
+            -n job-tracker \
+            --timeout=180s
+
+      - name: Wait for frontend rollout
+        run: |
+          kubectl rollout status deployment/frontend \
+            -n job-tracker \
+            --timeout=180s
+
+      - name: Wait for ingress
+        run: |
+          for i in {1..30}; do
+            if curl --silent --fail http://localhost >/dev/null; then
+              echo "Application is reachable."
+              exit 0
+            fi
+
+            echo "Waiting... ($i/30)"
+            sleep 5
+          done
+
+          exit 1
+
+      - name: Verify health command
+        run: ./orchestrator-kubernetes.sh health
+
+      - name: Verify frontend
+        run: |
+          curl --fail http://localhost
+
+      - name: Verify backend API
+        run: |
+          curl --fail http://localhost/api/applications
+
+      - name: Verify Swagger
+        run: |
+          curl --fail http://localhost/swagger-ui/index.html
+
+      - name: Show Kubernetes resources
+        if: always()
+        run: |
+          kubectl get all -A
+
+      - name: Show pods
+        if: always()
+        run: |
+          kubectl get pods -A -o wide
+
+      - name: Describe pods
+        if: failure()
+        run: |
+          kubectl describe pods -n job-tracker
+
+      - name: Backend logs
+        if: failure()
+        run: |
+          kubectl logs deployment/backend -n job-tracker
+
+      - name: Frontend logs
+        if: failure()
+        run: |
+          kubectl logs deployment/frontend -n job-tracker
+
+      - name: Ingress controller logs
+        if: failure()
+        run: |
+          kubectl logs deployment/ingress-nginx-controller \
+            -n ingress-nginx
+
+      - name: Stop application
+        if: always()
+        run: ./orchestrator-kubernetes.sh stop
+
+      - name: Clean workspace
+        if: always()
+        run: |
+          printf "y\n" | ./orchestrator-kubernetes.sh clean
+
+      - name: Verify cleanup
+        if: always()
+        run: |
+          test -d workspace

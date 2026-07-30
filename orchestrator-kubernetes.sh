@@ -50,7 +50,7 @@ show_help() {
     echo -e "${BOLD}Job Application Tracker Kubernetes Orchestrator${NC}"
     echo
     echo -e "${BLUE}Usage:${NC}"
-    echo "  ./orchestrator-k8s.sh <command>"
+    echo "  ./orchestrator-kubernetes.sh <command>"
     echo
     echo -e "${BLUE}Commands:${NC}"
     echo -e "  ${GREEN}launch${NC}                  Clone repositories and deploy application"
