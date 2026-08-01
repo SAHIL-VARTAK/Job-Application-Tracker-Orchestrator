@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: backend
+  namespace: job-tracker
+
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: backend
+
+  template:
+    metadata:
+      labels:
+        app: backend
+
+    spec:
+      containers:
+        - name: backend
+          image: job-tracker-backend:latest
+          imagePullPolicy: Never
+
+          ports:
+            - containerPort: 8080
+
+          volumeMounts:
+            - name: sqlite-storage
+              mountPath: /app/data
+
+      volumes:
+        - name: sqlite-storage
+          persistentVolumeClaim:
+            claimName: sqlite-pvc

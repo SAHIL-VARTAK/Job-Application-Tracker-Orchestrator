@@ -35,22 +35,36 @@ The orchestrator manages repository cloning and Docker lifecycle, while Docker C
 
 ## Prerequisites
 
-Before running the project, ensure the following tools are installed:
+Before running the project, ensure the following tools are installed.
+
+### Common
 
 - Git
+
+### Docker Mode
+
 - Docker
 - Docker Compose
 
-The orchestrator automatically verifies these prerequisites before launching the application.
+### Kubernetes Mode
+
+- Docker
+- kubectl
+- Kind
+
+Each orchestrator automatically verifies that the required dependencies are installed before launching the application.
+
+---
 
 ## Running Modes
 
-The orchestrator supports two ways of running the application.
+The project supports three ways of running the application.
 
 | Mode | Script | Description |
 |------|--------|-------------|
 | Docker | `orchestrator.sh` | Builds Docker images and runs the application using Docker Compose. |
 | Local | `orchestrator-local.sh` | Runs the backend and frontend directly on your machine without Docker. Ideal for development and debugging. |
+| Kubernetes | `orchestrator-kubernetes.sh` | Creates a local Kind cluster, builds Docker images, deploys the application to Kubernetes, configures Ingress, and manages the complete application lifecycle. |
 
 ## Running with Docker
 
@@ -224,11 +238,30 @@ Once started, the application can be stopped with:
 | `stop` | Stop a detached local application |
 | `help` | Display the help menu |
 
+## Kubernetes Deployment
+
+This project includes a complete Kubernetes deployment for running the Job Application Tracker on a local **Kind** cluster.
+
+The Kubernetes setup provides:
+
+- Automated cluster creation and deployment
+- Persistent SQLite storage
+- NGINX Ingress routing
+- Multi-replica frontend deployment
+- Self-healing through Kubernetes Deployments
+- Automated lifecycle management (launch, update, stop, clean)
+- GitHub Actions CI validation
+
+For detailed architecture, deployment scripts, lifecycle, scaling, persistence, and resilience testing, see:
+
+**[Kubernetes Deployment Guide](kubernetes/README.md)**
+
 ## Continuous Integration
 
-This repository includes two GitHub Actions workflows:
+This repository includes three GitHub Actions workflows:
 
 | Workflow | Purpose |
 |----------|---------|
-| Docker Orchestrator CI | Validates the Docker-based orchestrator (`orchestrator.sh`) |
-| Local Orchestrator CI | Validates the native/local orchestrator (`orchestrator-local.sh`) by launching the application, verifying the backend and frontend, and shutting down the running processes |
+| Docker Orchestrator CI | Validates the Docker-based orchestrator (`orchestrator.sh`) by building, launching, verifying, and cleaning up the Docker deployment. |
+| Local Orchestrator CI | Validates the native/local orchestrator (`orchestrator-local.sh`) by launching the application, verifying the backend and frontend, and shutting down the running processes. |
+| Kubernetes Orchestrator CI | Validates the Kubernetes orchestrator (`orchestrator-kubernetes.sh`) by creating a Kind cluster, building and deploying the application, verifying Kubernetes resources and application endpoints, and performing automated cleanup. |
